@@ -109,6 +109,12 @@ The app includes a checkbox:
 Simulate bad model output, then retry
 ```
 
+It also includes:
+
+```txt
+Simulate valid JSON with wrong schema, then retry
+```
+
 When enabled:
 
 ```txt
@@ -117,6 +123,17 @@ backend JSON.parse fails
 backend records the failed attempt
 attempt 2 -> backend asks again with stricter expectations
 backend parses and validates the final JSON
+```
+
+There are two different failure modes:
+
+```txt
+invalid JSON
+-> JSON.parse fails
+
+valid JSON, wrong schema
+-> JSON.parse succeeds
+-> schema validation fails
 ```
 
 Production lesson:
@@ -129,7 +146,7 @@ Production lesson:
 
 Retry interview answer:
 
-> If a model returns invalid structured output, I would not pass it directly to the UI or database. I would parse and validate it on the backend, retry with a stricter prompt or schema instruction, and return a controlled error if it still fails.
+> If a model returns invalid structured output, I would not pass it directly to the UI or database. First I would parse it as JSON. Then I would validate it against the expected schema. If parsing or validation fails, I would retry with a stricter prompt or schema instruction and return a controlled error if it still fails.
 
 ## Interview Answer
 

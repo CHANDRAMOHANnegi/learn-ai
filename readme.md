@@ -99,7 +99,7 @@ Build:
 
 Interview answer:
 
-> If a model returns invalid structured output, parse and validate it on the backend, retry with a stricter prompt or schema instruction, and return a controlled error if it still fails.
+> If a model returns invalid structured output, parse it as JSON, validate it against the expected schema, retry with a stricter prompt or schema instruction if parsing or validation fails, and return a controlled error if it still fails.
 
 ### Week 3: Embeddings
 

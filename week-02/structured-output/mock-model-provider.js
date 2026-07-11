@@ -44,6 +44,21 @@ async function mockStructuredExtraction(text, options = {}) {
     return "{ name: Chandramohan Negi, skills: React, TypeScript";
   }
 
+  if (options.simulateSchemaError && options.attempt === 1) {
+    return JSON.stringify(
+      {
+        name: "Chandramohan Negi",
+        role: "Senior Software Engineer",
+        skills: "React, TypeScript",
+        summary:
+          "Frontend/platform engineer with experience across web, mobile, dashboards, and AI-assisted workflows.",
+        confidence: "very high"
+      },
+      null,
+      2
+    );
+  }
+
   return JSON.stringify(createProfileJson(text), null, 2);
 }
 

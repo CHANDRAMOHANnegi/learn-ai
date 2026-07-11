@@ -26,11 +26,13 @@ async function handleExtract(req, res) {
   const rawBody = await readRequestBody(req);
   let text = "";
   let simulateBadOutput = false;
+  let simulateSchemaError = false;
 
   try {
     const parsed = JSON.parse(rawBody);
     text = String(parsed.text || "");
     simulateBadOutput = Boolean(parsed.simulateBadOutput);
+    simulateSchemaError = Boolean(parsed.simulateSchemaError);
   } catch {
     res.writeHead(400, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Invalid JSON body" }));
@@ -49,6 +51,7 @@ async function handleExtract(req, res) {
     const prompt = buildExtractionPrompt(text, { attempt });
     const modelOutput = await mockStructuredExtraction(text, {
       simulateBadOutput,
+      simulateSchemaError,
       attempt
     });
 

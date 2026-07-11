@@ -102,6 +102,10 @@
             <input id="simulateBadOutput" type="checkbox" />
             Simulate bad model output, then retry
           </label>
+          <label>
+            <input id="simulateSchemaError" type="checkbox" />
+            Simulate valid JSON with wrong schema, then retry
+          </label>
           <button id="extract">Extract JSON</button>
           <div id="status" class="status"></div>
         </section>
@@ -118,6 +122,7 @@
       const extract = document.querySelector("#extract");
       const status = document.querySelector("#status");
       const simulateBadOutput = document.querySelector("#simulateBadOutput");
+      const simulateSchemaError = document.querySelector("#simulateSchemaError");
 
       extract.addEventListener("click", async () => {
         extract.disabled = true;
@@ -130,7 +135,8 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               text: input.value,
-              simulateBadOutput: simulateBadOutput.checked
+              simulateBadOutput: simulateBadOutput.checked,
+              simulateSchemaError: simulateSchemaError.checked
             })
           });
           const data = await response.json();
