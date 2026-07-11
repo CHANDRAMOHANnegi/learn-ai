@@ -32,6 +32,8 @@ async function handleSearch(request, response) {
   const body = await readRequestBody(request);
   const payload = body ? JSON.parse(body) : {};
   const query = String(payload.query || "").trim();
+  const topK = Math.min(Math.max(Number(payload.topK || 3), 1), 6);
+  const minScore = Math.min(Math.max(Number(payload.minScore || 0.01), 0), 1);
 
   if (!query) {
     sendJson(response, 400, { error: "query is required" });
@@ -39,11 +41,20 @@ async function handleSearch(request, response) {
   }
 
   const rankedDocuments = rankDocuments(query, searchIndex);
+  const filteredDocuments = rankedDocuments.filter((document) => {
+    return document.score >= minScore;
+  });
 
   sendJson(response, 200, {
     query,
     queryTokens: tokenize(query),
-    topResults: rankedDocuments.slice(0, 4),
+    topResults: filteredDocuments.slice(0, topK),
+    retrievalConfig: {
+      topK,
+      minScore,
+      totalDocuments: rankedDocuments.length,
+      keptDocuments: filteredDocuments.length,
+    },
     debug: {
       vocabularySize: searchIndex.vocabulary.length,
       vocabulary: searchIndex.vocabulary,

@@ -92,6 +92,31 @@ curl -s http://127.0.0.1:8789/api/search \
 - cosine similarity gives every document a score
 - the UI sorts by score
 - the debug panel shows why this toy version matched words
+- `topK` controls how many documents are allowed into context
+- `minScore` blocks weak matches from being sent to the model
+
+## Retrieval Tuning
+
+In interviews, do not say "we retrieve documents" as if retrieval is always correct.
+
+Retrieval needs tuning:
+
+```txt
+topK = maximum number of chunks to return
+minScore = minimum similarity score needed to trust a chunk
+```
+
+If `topK` is too low, the answer may miss needed context.
+
+If `topK` is too high, the model receives noisy context.
+
+If `minScore` is too low, weak evidence can cause hallucination.
+
+If `minScore` is too high, the app may refuse even when useful context exists.
+
+Interview answer:
+
+> In retrieval, I tune topK and similarity thresholds. topK controls how much context we send, while a minimum score prevents weak matches from being treated as evidence. If no chunk crosses the threshold, the assistant should ask for clarification or say it does not have enough evidence.
 
 ## Interview Answer
 

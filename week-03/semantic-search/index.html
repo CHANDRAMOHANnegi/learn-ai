@@ -66,18 +66,36 @@
         gap: 12px;
       }
 
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        color: #475467;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
       input,
+      select,
       button {
         min-height: 48px;
         border-radius: 8px;
         font: inherit;
       }
 
-      input {
+      input,
+      select {
         width: 100%;
         border: 1px solid #c9d3e2;
         padding: 0 14px;
         color: #111827;
+        background: #ffffff;
       }
 
       button {
@@ -212,6 +230,23 @@
             />
             <button id="searchButton" type="submit">Search</button>
           </form>
+          <div class="controls">
+            <label>
+              Top K
+              <select id="topKInput">
+                <option value="1">1 result</option>
+                <option value="2">2 results</option>
+                <option value="3" selected>3 results</option>
+                <option value="4">4 results</option>
+                <option value="5">5 results</option>
+                <option value="6">6 results</option>
+              </select>
+            </label>
+            <label>
+              Min Score
+              <input id="minScoreInput" type="number" min="0" max="1" step="0.01" value="0.01" />
+            </label>
+          </div>
 
           <div id="results" class="results" aria-live="polite"></div>
         </section>
@@ -229,6 +264,10 @@
               <dd id="vocabularySize">-</dd>
             </div>
             <div>
+              <dt>Retrieval Config</dt>
+              <dd><code id="retrievalConfig">-</code></dd>
+            </div>
+            <div>
               <dt>Vocabulary</dt>
               <dd><code id="vocabulary">-</code></dd>
             </div>
@@ -240,16 +279,37 @@
     <script>
       const form = document.querySelector("#searchForm");
       const input = document.querySelector("#queryInput");
+      const topKInput = document.querySelector("#topKInput");
+      const minScoreInput = document.querySelector("#minScoreInput");
       const button = document.querySelector("#searchButton");
       const results = document.querySelector("#results");
       const queryTokens = document.querySelector("#queryTokens");
       const vocabularySize = document.querySelector("#vocabularySize");
       const vocabulary = document.querySelector("#vocabulary");
+      const retrievalConfig = document.querySelector("#retrievalConfig");
 
       function renderResults(payload) {
         queryTokens.textContent = payload.queryTokens.join(", ") || "-";
         vocabularySize.textContent = String(payload.debug.vocabularySize);
         vocabulary.textContent = payload.debug.vocabulary.join(", ");
+        retrievalConfig.textContent =
+          `topK=${payload.retrievalConfig.topK}, ` +
+          `minScore=${payload.retrievalConfig.minScore}, ` +
+          `kept=${payload.retrievalConfig.keptDocuments}/` +
+          `${payload.retrievalConfig.totalDocuments}`;
+
+        if (payload.topResults.length === 0) {
+          results.innerHTML = `
+            <article class="result">
+              <div class="result-header">
+                <h2>No Context Selected</h2>
+                <span class="score">0.000</span>
+              </div>
+              <p>No document crossed the minimum score. In a RAG app, this is where you avoid answering from weak evidence.</p>
+            </article>
+          `;
+          return;
+        }
 
         results.innerHTML = payload.topResults
           .map((result) => {
@@ -279,7 +339,11 @@
           const response = await fetch("/api/search", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ query }),
+            body: JSON.stringify({
+              query,
+              topK: Number(topKInput.value),
+              minScore: Number(minScoreInput.value),
+            }),
           });
 
           const payload = await response.json();
@@ -301,6 +365,9 @@
         event.preventDefault();
         search(input.value.trim());
       });
+
+      topKInput.addEventListener("change", () => search(input.value.trim()));
+      minScoreInput.addEventListener("change", () => search(input.value.trim()));
 
       search(input.value.trim());
     </script>
