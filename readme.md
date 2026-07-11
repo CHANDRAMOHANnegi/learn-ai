@@ -31,6 +31,13 @@ week-02/
     prompt-builder.js
     server.js
   readme.md
+week-03/
+  semantic-search/
+    documents.js
+    embedding.js
+    index.html
+    server.js
+  readme.md
 ```
 
 Run the Week 1 backend streaming demo:
@@ -55,6 +62,18 @@ Open:
 
 ```txt
 http://127.0.0.1:8788
+```
+
+Run the Week 3 semantic search demo:
+
+```bash
+node week-03/semantic-search/server.js
+```
+
+Open:
+
+```txt
+http://127.0.0.1:8789
 ```
 
 ## 8-Week Interview-Focused Plan
@@ -115,6 +134,10 @@ Learn:
 Build:
 
 - semantic search over notes/resume/docs
+
+Interview answer:
+
+> Embeddings convert text into vectors so similar meaning can be searched by distance or similarity. In RAG, we embed documents, store those vectors, embed the user query, retrieve the most similar chunks, and pass only those chunks to the LLM as grounded context.
 
 ### Week 4: RAG
 
