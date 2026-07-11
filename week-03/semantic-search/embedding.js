@@ -6,6 +6,10 @@ const stopWords = new Set([
   "as",
   "before",
   "can",
+  "do",
+  "does",
+  "for",
+  "how",
   "in",
   "into",
   "is",
@@ -13,11 +17,15 @@ const stopWords = new Set([
   "of",
   "on",
   "or",
+  "should",
   "so",
   "the",
   "this",
   "to",
+  "we",
+  "what",
   "when",
+  "why",
   "with",
 ]);
 
@@ -87,15 +95,17 @@ function rankDocuments(query, searchIndex) {
   const queryVector = embedText(query, searchIndex.vocabulary);
 
   return searchIndex.indexedDocuments
-    .map((document) => ({
-      id: document.id,
-      title: document.title,
-      text: document.text,
-      score: cosineSimilarity(queryVector, document.vector),
-      matchedWords: searchIndex.vocabulary.filter((word, index) => {
-        return queryVector[index] > 0 && document.vector[index] > 0;
-      }),
-    }))
+    .map((document) => {
+      const { vector, ...metadata } = document;
+
+      return {
+        ...metadata,
+        score: cosineSimilarity(queryVector, vector),
+        matchedWords: searchIndex.vocabulary.filter((word, index) => {
+          return queryVector[index] > 0 && vector[index] > 0;
+        }),
+      };
+    })
     .sort((left, right) => right.score - left.score);
 }
 

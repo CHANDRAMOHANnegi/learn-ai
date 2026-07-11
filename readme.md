@@ -38,6 +38,13 @@ week-03/
     index.html
     server.js
   readme.md
+week-04/
+  rag-citations/
+    corpus.js
+    index.html
+    rag-service.js
+    server.js
+  readme.md
 ```
 
 Run the Week 1 backend streaming demo:
@@ -74,6 +81,18 @@ Open:
 
 ```txt
 http://127.0.0.1:8789
+```
+
+Run the Week 4 RAG citations demo:
+
+```bash
+node week-04/rag-citations/server.js
+```
+
+Open:
+
+```txt
+http://127.0.0.1:8790
 ```
 
 ## 8-Week Interview-Focused Plan
@@ -152,6 +171,10 @@ Learn:
 Build:
 
 - document Q&A with citations
+
+Interview answer:
+
+> RAG reduces hallucination by retrieving relevant trusted chunks before generation, filtering weak matches, placing the selected chunks into the prompt, and requiring the model to answer with citations. If retrieval has no strong evidence, the assistant should refuse or ask for clarification instead of guessing.
 
 ### Week 5: Tool Calling
 

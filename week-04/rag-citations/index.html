@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Week 4 RAG With Citations</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        background: #f5f7fb;
+        color: #111827;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 42px 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(34px, 5vw, 54px);
+        line-height: 1;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        margin: 14px 0 26px;
+        color: #5f6f86;
+        font-size: 21px;
+        line-height: 1.35;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 380px;
+        gap: 18px;
+      }
+
+      .panel {
+        border: 1px solid #d7dfec;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .main-panel,
+      .side-panel {
+        padding: 18px;
+      }
+
+      form {
+        display: grid;
+        gap: 12px;
+      }
+
+      textarea,
+      input,
+      button {
+        border-radius: 8px;
+        font: inherit;
+      }
+
+      textarea,
+      input {
+        width: 100%;
+        border: 1px solid #c9d3e2;
+        color: #111827;
+        background: #ffffff;
+      }
+
+      textarea {
+        min-height: 92px;
+        padding: 14px;
+        resize: vertical;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        color: #475467;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      input {
+        min-height: 44px;
+        padding: 0 12px;
+      }
+
+      button {
+        min-height: 48px;
+        border: 0;
+        background: #155eef;
+        color: #ffffff;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
+      }
+
+      .answer,
+      .doc,
+      .prompt {
+        margin-top: 14px;
+        border: 1px solid #d7dfec;
+        border-radius: 8px;
+        background: #fbfdff;
+        padding: 16px;
+      }
+
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      h3 {
+        font-size: 17px;
+      }
+
+      p {
+        margin: 10px 0 0;
+        color: #4b5563;
+        line-height: 1.5;
+      }
+
+      .citation-list,
+      .doc-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .score {
+        display: inline-block;
+        border-radius: 999px;
+        background: #e7f0ff;
+        color: #155eef;
+        padding: 4px 8px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      pre {
+        margin: 12px 0 0;
+        max-height: 360px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #101828;
+      }
+
+      .refused {
+        border-color: #fedf89;
+        background: #fffaeb;
+      }
+
+      @media (max-width: 860px) {
+        .layout,
+        .controls {
+          grid-template-columns: 1fr;
+        }
+
+        .subtitle {
+          font-size: 18px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>RAG With Citations</h1>
+      <p class="subtitle">
+        Retrieve evidence, assemble context, answer only from that context, and
+        cite the sources.
+      </p>
+
+      <div class="layout">
+        <section class="panel main-panel" aria-label="RAG answer">
+          <form id="ragForm">
+            <textarea id="questionInput">How should we reduce hallucination in an AI app?</textarea>
+            <div class="controls">
+              <label>
+                Top K
+                <input id="topKInput" type="number" min="1" max="5" value="3" />
+              </label>
+              <label>
+                Min Score
+                <input id="minScoreInput" type="number" min="0" max="1" step="0.01" value="0.08" />
+              </label>
+            </div>
+            <button id="answerButton" type="submit">Answer With Citations</button>
+          </form>
+
+          <div id="answer" class="answer" aria-live="polite"></div>
+          <div id="documents" class="doc-list"></div>
+        </section>
+
+        <aside class="panel side-panel" aria-label="Generated prompt">
+          <h2>Prompt Sent To LLM</h2>
+          <p>This demo shows the prompt, but uses a mock answer so the RAG flow is inspectable.</p>
+          <div class="prompt">
+            <pre id="promptOutput">-</pre>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <script>
+      const form = document.querySelector("#ragForm");
+      const questionInput = document.querySelector("#questionInput");
+      const topKInput = document.querySelector("#topKInput");
+      const minScoreInput = document.querySelector("#minScoreInput");
+      const answerButton = document.querySelector("#answerButton");
+      const answer = document.querySelector("#answer");
+      const documents = document.querySelector("#documents");
+      const promptOutput = document.querySelector("#promptOutput");
+
+      function render(payload) {
+        answer.className = payload.refused ? "answer refused" : "answer";
+        answer.innerHTML = `
+          <h2>${payload.refused ? "Refused" : "Grounded Answer"}</h2>
+          <p>${payload.answer}</p>
+          <div class="citation-list">
+            ${payload.citations
+              .map((citation) => {
+                return `<p><strong>[${citation.citationId}] ${citation.title}</strong> (${citation.source}) <span class="score">${citation.score.toFixed(3)}</span></p>`;
+              })
+              .join("")}
+          </div>
+        `;
+
+        documents.innerHTML = payload.selectedDocuments
+          .map((document) => {
+            return `
+              <article class="doc">
+                <h3>[${document.citationId}] ${document.title}</h3>
+                <p>${document.text}</p>
+                <p><span class="score">${document.score.toFixed(3)}</span> ${document.source}</p>
+              </article>
+            `;
+          })
+          .join("");
+
+        if (payload.selectedDocuments.length === 0) {
+          documents.innerHTML = `
+            <article class="doc">
+              <h3>No Context</h3>
+              <p>No retrieved document crossed the threshold, so the assistant should refuse or ask for clarification.</p>
+            </article>
+          `;
+        }
+
+        promptOutput.textContent = payload.prompt;
+      }
+
+      async function answerQuestion() {
+        answerButton.disabled = true;
+        answerButton.textContent = "Retrieving";
+
+        try {
+          const response = await fetch("/api/answer", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              question: questionInput.value.trim(),
+              topK: Number(topKInput.value),
+              minScore: Number(minScoreInput.value),
+            }),
+          });
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error || "Request failed");
+          }
+
+          render(payload);
+        } catch (error) {
+          answer.innerHTML = `<h2>Error</h2><p>${error.message}</p>`;
+        } finally {
+          answerButton.disabled = false;
+          answerButton.textContent = "Answer With Citations";
+        }
+      }
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        answerQuestion();
+      });
+
+      answerQuestion();
+    </script>
+  </body>
+</html>
