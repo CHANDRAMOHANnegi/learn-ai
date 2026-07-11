@@ -81,22 +81,42 @@ async function handleChat(req, res) {
   res.writeHead(200, {
     "Content-Type": "text/plain; charset=utf-8",
     "Cache-Control": "no-cache",
+    "Access-Control-Allow-Origin": "*",
     "Transfer-Encoding": "chunked"
   });
 
   const answer = chooseAnswer(prompt);
   const chunks = answer.split(/(\s+)/);
+  let clientClosed = false;
+
+  req.on("close", () => {
+    clientClosed = true;
+  });
 
   for (const chunk of chunks) {
+    if (clientClosed) break;
+
     res.write(chunk);
     await sleep(55);
   }
 
-  res.end();
+  if (!clientClosed) {
+    res.end();
+  }
 }
 
 const server = http.createServer(async (req, res) => {
   try {
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "POST, OPTIONS"
+      });
+      res.end();
+      return;
+    }
+
     if (req.method === "GET" && req.url === "/") {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(fs.readFileSync(INDEX_PATH, "utf8"));

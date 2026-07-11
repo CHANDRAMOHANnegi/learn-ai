@@ -39,6 +39,15 @@
         color: #647084;
       }
 
+      .notice {
+        border: 1px solid #c9d7ff;
+        border-radius: 8px;
+        background: #eef3ff;
+        padding: 10px 12px;
+        color: #32425f;
+        font-size: 14px;
+      }
+
       #messages {
         overflow: auto;
         border: 1px solid #d9dfeb;
@@ -56,6 +65,10 @@
         white-space: pre-wrap;
       }
 
+      .message-text {
+        white-space: pre-wrap;
+      }
+
       .user {
         margin-left: auto;
         background: #151922;
@@ -67,9 +80,15 @@
         background: #eef3ff;
       }
 
+      .metrics {
+        margin-top: 8px;
+        color: #647084;
+        font-size: 12px;
+      }
+
       form {
         display: grid;
-        grid-template-columns: 1fr auto;
+        grid-template-columns: 1fr auto auto;
         gap: 10px;
         padding: 12px;
         border: 1px solid #d9dfeb;
@@ -102,6 +121,11 @@
         cursor: not-allowed;
       }
 
+      button.secondary {
+        background: #e8edf7;
+        color: #151922;
+      }
+
       @media (max-width: 640px) {
         main {
           padding: 14px;
@@ -124,11 +148,14 @@
         <p>Browser sends a prompt to `/api/chat`; server streams chunks back.</p>
       </header>
 
+      <div id="notice" class="notice" hidden></div>
+
       <section id="messages" aria-live="polite"></section>
 
       <form id="form">
         <textarea id="prompt" placeholder="Ask: how does streaming work?"></textarea>
         <button id="send" type="submit">Send</button>
+        <button id="stop" class="secondary" type="button" disabled>Stop</button>
       </form>
     </main>
 
@@ -136,33 +163,97 @@
       const form = document.querySelector("#form");
       const input = document.querySelector("#prompt");
       const send = document.querySelector("#send");
+      const stop = document.querySelector("#stop");
       const messages = document.querySelector("#messages");
+      const notice = document.querySelector("#notice");
+      let activeController = null;
+      const apiUrl =
+        window.location.protocol === "file:"
+          ? "http://127.0.0.1:8787/api/chat"
+          : "/api/chat";
+
+      if (window.location.protocol === "file:") {
+        notice.hidden = false;
+        notice.textContent =
+          "You opened this as a file. This demo still needs the Node server running; API calls will go to http://127.0.0.1:8787/api/chat.";
+      }
 
       function addMessage(role, text = "") {
         const element = document.createElement("div");
+        const textEl = document.createElement("div");
         element.className = `message ${role}`;
-        element.textContent = text;
+        textEl.className = "message-text";
+        textEl.textContent = text;
+        element.appendChild(textEl);
         messages.appendChild(element);
         messages.scrollTop = messages.scrollHeight;
         return element;
       }
 
+      function setMessageText(element, text) {
+        element.querySelector(".message-text").textContent = text;
+      }
+
+      function appendMessageText(element, text) {
+        const textEl = element.querySelector(".message-text");
+        textEl.textContent += text;
+      }
+
+      function estimateTokens(text) {
+        return Math.ceil(text.trim().split(/\s+/).filter(Boolean).length * 1.3);
+      }
+
+      function setMetrics(element, metrics) {
+        let metricsEl = element.querySelector(".metrics");
+
+        if (!metricsEl) {
+          metricsEl = document.createElement("div");
+          metricsEl.className = "metrics";
+          element.appendChild(metricsEl);
+        }
+
+        metricsEl.textContent =
+          `first chunk: ${metrics.firstChunkMs ?? "-"}ms | ` +
+          `total: ${metrics.totalMs ?? "-"}ms | ` +
+          `chunks: ${metrics.chunkCount} | ` +
+          `~tokens: ${metrics.estimatedTokens}`;
+      }
+
       async function sendPrompt(prompt) {
         addMessage("user", prompt);
         const assistant = addMessage("assistant", "");
+        activeController = new AbortController();
+        const startedAt = performance.now();
+        let firstChunkMs = null;
+        let chunkCount = 0;
+        let assistantText = "";
 
         send.disabled = true;
+        stop.disabled = false;
         input.disabled = true;
 
         try {
-          const response = await fetch("/api/chat", {
+          const response = await fetch(apiUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt })
+            body: JSON.stringify({ prompt }),
+            signal: activeController.signal
           });
 
-          if (!response.ok || !response.body) {
+          if (!response.ok) {
             throw new Error("Streaming request failed");
+          }
+
+          if (!response.body || !response.body.getReader) {
+            assistantText = await response.text();
+            setMessageText(assistant, assistantText);
+            setMetrics(assistant, {
+              firstChunkMs: Math.round(performance.now() - startedAt),
+              totalMs: Math.round(performance.now() - startedAt),
+              chunkCount: 1,
+              estimatedTokens: estimateTokens(assistantText)
+            });
+            return;
           }
 
           const reader = response.body.getReader();
@@ -172,13 +263,34 @@
             const { value, done } = await reader.read();
             if (done) break;
 
-            assistant.textContent += decoder.decode(value, { stream: true });
+            if (firstChunkMs === null) {
+              firstChunkMs = Math.round(performance.now() - startedAt);
+            }
+
+            chunkCount += 1;
+            assistantText += decoder.decode(value, { stream: true });
+            setMessageText(assistant, assistantText);
+            setMetrics(assistant, {
+              firstChunkMs,
+              totalMs: Math.round(performance.now() - startedAt),
+              chunkCount,
+              estimatedTokens: estimateTokens(assistantText)
+            });
             messages.scrollTop = messages.scrollHeight;
           }
         } catch (error) {
-          assistant.textContent = "Request failed. Check the server terminal.";
+          if (error.name === "AbortError") {
+            appendMessageText(assistant, "\n\n[Stopped]");
+          } else {
+            setMessageText(
+              assistant,
+              "Request failed. Open http://127.0.0.1:8787 or start the server with: node week-01/backend-streaming/server.js"
+            );
+          }
         } finally {
+          activeController = null;
           send.disabled = false;
+          stop.disabled = true;
           input.disabled = false;
           input.focus();
         }
@@ -191,6 +303,12 @@
 
         input.value = "";
         sendPrompt(prompt);
+      });
+
+      stop.addEventListener("click", () => {
+        if (activeController) {
+          activeController.abort();
+        }
       });
     </script>
   </body>

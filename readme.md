@@ -318,15 +318,37 @@ Frontend APIs:
 - `response.body.getReader()` reads streamed chunks.
 - `TextDecoder` converts binary chunks into text.
 - the UI appends each decoded chunk to the assistant message.
+- `response.text()` is a fallback when readable streams are unavailable.
+
+Useful AI UX metrics:
+
+- time to first chunk/token
+- total response time
+- chunk count
+- estimated token count
 
 Backend APIs:
 
 - `res.write(chunk)` sends partial output.
 - `res.end()` finishes the stream.
 
+Cancellation:
+
+- `AbortController` cancels the browser request.
+- the backend listens for the client connection closing.
+- the backend stops writing chunks when the client disconnects.
+
 Interview answer:
 
 > In a production AI app, the browser usually should not call the model provider directly. The browser sends the prompt to our backend, the backend calls the model provider, and then the backend streams chunks back to the browser. This protects secrets and gives us a place for auth, rate limits, logging, retrieval, and validation.
+
+Stop generating interview answer:
+
+> Stop generating is usually implemented by cancelling the browser request with AbortController and making the backend stop the upstream model stream or local chunk loop when the client disconnects. This avoids wasting latency and compute.
+
+Latency interview answer:
+
+> For streaming AI UX, time to first token is often more important than total response time because it controls how quickly the user sees progress. We still track total latency and token count because they affect cost, throughput, and user experience.
 
 ## Day 1 Practice
 
