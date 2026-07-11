@@ -107,6 +107,7 @@
             Simulate valid JSON with wrong schema, then retry
           </label>
           <button id="extract">Extract JSON</button>
+          <button id="runEvals" type="button">Run Evals</button>
           <div id="status" class="status"></div>
         </section>
 
@@ -120,12 +121,14 @@
       const input = document.querySelector("#input");
       const output = document.querySelector("#output");
       const extract = document.querySelector("#extract");
+      const runEvals = document.querySelector("#runEvals");
       const status = document.querySelector("#status");
       const simulateBadOutput = document.querySelector("#simulateBadOutput");
       const simulateSchemaError = document.querySelector("#simulateSchemaError");
 
       extract.addEventListener("click", async () => {
         extract.disabled = true;
+        runEvals.disabled = true;
         status.textContent = "Extracting...";
         output.textContent = "";
 
@@ -150,6 +153,30 @@
           output.textContent = String(error);
         } finally {
           extract.disabled = false;
+          runEvals.disabled = false;
+        }
+      });
+
+      runEvals.addEventListener("click", async () => {
+        extract.disabled = true;
+        runEvals.disabled = true;
+        status.textContent = "Running evals...";
+        output.textContent = "";
+
+        try {
+          const response = await fetch("/api/evals");
+          const data = await response.json();
+
+          output.textContent = JSON.stringify(data, null, 2);
+          status.textContent = data.ok
+            ? `Evals passed: ${data.passed}/${data.total}`
+            : `Evals failed: ${data.passed}/${data.total}`;
+        } catch (error) {
+          status.textContent = "Eval request failed. Is the server running?";
+          output.textContent = String(error);
+        } finally {
+          extract.disabled = false;
+          runEvals.disabled = false;
         }
       });
     </script>

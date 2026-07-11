@@ -23,6 +23,8 @@ week-01/
   readme.md
 week-02/
   structured-output/
+    eval-cases.js
+    extractor-service.js
     index.html
     mock-model-provider.js
     profile-schema.js

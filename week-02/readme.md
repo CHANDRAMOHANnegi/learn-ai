@@ -35,6 +35,8 @@ Path:
 
 ```txt
 week-02/structured-output/
+  eval-cases.js
+  extractor-service.js
   index.html
   server.js
   mock-model-provider.js
@@ -65,6 +67,31 @@ profile text
 -> UI shows profile + validation result
 ```
 
+## Evals
+
+The app includes a `Run Evals` button.
+
+Eval flow:
+
+```txt
+eval-cases.js
+-> fixed test inputs and expected fields
+-> extractor-service.js runs extraction
+-> backend checks expected fields
+-> UI shows passed/total
+```
+
+Why evals matter:
+
+- one successful manual test is not enough
+- structured output can regress when prompts change
+- evals catch missing fields, wrong roles, and missing skills
+- evals make prompt/schema changes safer
+
+Interview answer:
+
+> For AI features, I would create eval cases with representative inputs and expected outputs. Whenever I change prompts, schemas, or model settings, I run those evals to catch regressions in extraction quality and schema correctness.
+
 ## Prompt And Schema Boundary
 
 The app now separates the contract from the route:
@@ -78,6 +105,9 @@ profile-schema.js
 
 server.js
 -> calls prompt builder, model provider, parser, and validator
+
+extractor-service.js
+-> reusable extraction flow shared by the UI route and eval route
 ```
 
 This is the production mental model:
