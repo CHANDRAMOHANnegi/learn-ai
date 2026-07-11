@@ -18,6 +18,7 @@ week-01/
     index.html
   backend-streaming/
     index.html
+    mock-model-provider.js
     server.js
   readme.md
 ```
@@ -331,6 +332,12 @@ Backend APIs:
 
 - `res.write(chunk)` sends partial output.
 - `res.end()` finishes the stream.
+
+Backend boundary:
+
+- `server.js` owns HTTP routing, validation, headers, streaming, and disconnects.
+- `mock-model-provider.js` owns model-like response generation.
+- later, the mock provider can be replaced by a real model provider.
 
 Cancellation:
 

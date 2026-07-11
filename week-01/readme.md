@@ -38,6 +38,9 @@ Path:
 
 ```txt
 week-01/backend-streaming/
+  server.js
+  mock-model-provider.js
+  index.html
 ```
 
 Run from repo root:
@@ -70,6 +73,18 @@ res.write(chunk);
 ```
 
 `res.write(chunk)` sends one partial piece of the response without closing the HTTP response.
+
+Backend boundary:
+
+```txt
+server.js
+-> HTTP route, validation, headers, client disconnect handling
+
+mock-model-provider.js
+-> model-like response generation and streaming chunks
+```
+
+This is intentionally shaped like a real AI backend. Later, `mock-model-provider.js` can be replaced with an OpenAI/model-provider implementation while the route stays mostly the same.
 
 Key frontend idea:
 
