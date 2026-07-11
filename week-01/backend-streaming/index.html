@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Backend Streaming Shape</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #f5f7fb;
+        color: #151922;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      main {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 16px;
+        max-width: 900px;
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 24px;
+      }
+
+      p {
+        margin: 6px 0 0;
+        color: #647084;
+      }
+
+      #messages {
+        overflow: auto;
+        border: 1px solid #d9dfeb;
+        border-radius: 8px;
+        background: white;
+        padding: 18px;
+      }
+
+      .message {
+        max-width: 80%;
+        margin-bottom: 12px;
+        padding: 12px 14px;
+        border-radius: 8px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+
+      .user {
+        margin-left: auto;
+        background: #151922;
+        color: white;
+      }
+
+      .assistant {
+        margin-right: auto;
+        background: #eef3ff;
+      }
+
+      form {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid #d9dfeb;
+        border-radius: 8px;
+        background: white;
+      }
+
+      textarea {
+        min-height: 48px;
+        resize: vertical;
+        border: 1px solid #d9dfeb;
+        border-radius: 8px;
+        padding: 12px;
+        font: inherit;
+      }
+
+      button {
+        min-width: 96px;
+        border: 0;
+        border-radius: 8px;
+        background: #1463ff;
+        color: white;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 14px;
+        }
+
+        form {
+          grid-template-columns: 1fr;
+        }
+
+        button {
+          min-height: 44px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Backend Streaming Shape</h1>
+        <p>Browser sends a prompt to `/api/chat`; server streams chunks back.</p>
+      </header>
+
+      <section id="messages" aria-live="polite"></section>
+
+      <form id="form">
+        <textarea id="prompt" placeholder="Ask: how does streaming work?"></textarea>
+        <button id="send" type="submit">Send</button>
+      </form>
+    </main>
+
+    <script>
+      const form = document.querySelector("#form");
+      const input = document.querySelector("#prompt");
+      const send = document.querySelector("#send");
+      const messages = document.querySelector("#messages");
+
+      function addMessage(role, text = "") {
+        const element = document.createElement("div");
+        element.className = `message ${role}`;
+        element.textContent = text;
+        messages.appendChild(element);
+        messages.scrollTop = messages.scrollHeight;
+        return element;
+      }
+
+      async function sendPrompt(prompt) {
+        addMessage("user", prompt);
+        const assistant = addMessage("assistant", "");
+
+        send.disabled = true;
+        input.disabled = true;
+
+        try {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt })
+          });
+
+          if (!response.ok || !response.body) {
+            throw new Error("Streaming request failed");
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            assistant.textContent += decoder.decode(value, { stream: true });
+            messages.scrollTop = messages.scrollHeight;
+          }
+        } catch (error) {
+          assistant.textContent = "Request failed. Check the server terminal.";
+        } finally {
+          send.disabled = false;
+          input.disabled = false;
+          input.focus();
+        }
+      }
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const prompt = input.value.trim();
+        if (!prompt) return;
+
+        input.value = "";
+        sendPrompt(prompt);
+      });
+    </script>
+  </body>
+</html>

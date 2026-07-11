@@ -10,6 +10,30 @@ LLM basics -> prompting -> embeddings -> RAG -> tools -> agents -> AI system des
 
 This repo should stay practical. Every concept should connect to a small runnable artifact or interview answer.
 
+## Repo Structure
+
+```txt
+week-01/
+  browser-mock-streaming/
+    index.html
+  backend-streaming/
+    index.html
+    server.js
+  readme.md
+```
+
+Run the Week 1 backend streaming demo:
+
+```bash
+node week-01/backend-streaming/server.js
+```
+
+Open:
+
+```txt
+http://127.0.0.1:8787
+```
+
 ## 8-Week Interview-Focused Plan
 
 ### Week 1: LLM Fundamentals

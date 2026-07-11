@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Week 1 Streaming Chat</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7fb;
+        --panel: #ffffff;
+        --text: #151922;
+        --muted: #647084;
+        --line: #d9dfeb;
+        --primary: #1463ff;
+        --primary-dark: #0f4ec7;
+        --assistant: #eef3ff;
+        --user: #151922;
+        --danger: #b3261e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        min-height: 100vh;
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 24px;
+        gap: 16px;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 16px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.2;
+      }
+
+      .subtle {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .status {
+        min-width: 132px;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+
+      .chat {
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 18px;
+      }
+
+      .empty {
+        height: 100%;
+        min-height: 300px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .messages {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .message {
+        max-width: min(760px, 92%);
+        padding: 12px 14px;
+        border-radius: 8px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .message.user {
+        align-self: flex-end;
+        background: var(--user);
+        color: white;
+      }
+
+      .message.assistant {
+        align-self: flex-start;
+        background: var(--assistant);
+        color: var(--text);
+      }
+
+      .cursor {
+        display: inline-block;
+        width: 8px;
+        margin-left: 2px;
+        color: var(--primary);
+        animation: blink 0.9s steps(2, start) infinite;
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      form {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      textarea {
+        min-height: 46px;
+        max-height: 140px;
+        resize: vertical;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        color: var(--text);
+        font: inherit;
+      }
+
+      textarea:focus {
+        outline: 2px solid rgba(20, 99, 255, 0.2);
+        border-color: var(--primary);
+      }
+
+      button {
+        min-width: 88px;
+        border: 0;
+        border-radius: 8px;
+        padding: 0 16px;
+        background: var(--primary);
+        color: white;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--primary-dark);
+      }
+
+      button.secondary {
+        background: #e8edf7;
+        color: var(--text);
+      }
+
+      button.secondary:hover {
+        background: #dce4f2;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      .error {
+        color: var(--danger);
+        font-size: 13px;
+        min-height: 18px;
+        margin-top: -6px;
+      }
+
+      @media (max-width: 640px) {
+        .shell {
+          padding: 14px;
+        }
+
+        header {
+          align-items: start;
+          flex-direction: column;
+        }
+
+        .status {
+          width: 100%;
+          text-align: left;
+        }
+
+        form {
+          grid-template-columns: 1fr;
+        }
+
+        button {
+          min-height: 44px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <div>
+          <h1>Week 1 Streaming Chat</h1>
+          <p class="subtle">Mock LLM stream: learn the UI pattern before the API.</p>
+        </div>
+        <div id="status" class="status">Idle</div>
+      </header>
+
+      <section id="chat" class="chat" aria-live="polite">
+        <div id="empty" class="empty">
+          Ask about tokens, context windows, hallucination, RAG, or fine-tuning.
+        </div>
+        <div id="messages" class="messages"></div>
+      </section>
+
+      <div>
+        <div id="error" class="error"></div>
+        <form id="form">
+          <textarea
+            id="prompt"
+            name="prompt"
+            placeholder="Ask: Why do LLMs hallucinate?"
+            autocomplete="off"
+          ></textarea>
+          <button id="send" type="submit">Send</button>
+          <button id="stop" class="secondary" type="button" disabled>Stop</button>
+        </form>
+      </div>
+    </main>
+
+    <script>
+      const form = document.querySelector("#form");
+      const promptInput = document.querySelector("#prompt");
+      const messagesEl = document.querySelector("#messages");
+      const emptyEl = document.querySelector("#empty");
+      const statusEl = document.querySelector("#status");
+      const errorEl = document.querySelector("#error");
+      const sendButton = document.querySelector("#send");
+      const stopButton = document.querySelector("#stop");
+      const chatEl = document.querySelector("#chat");
+
+      let isStreaming = false;
+      let abortStream = false;
+      const messages = [];
+
+      const answers = [
+        {
+          match: ["token", "tokens"],
+          text:
+            "A token is the unit an LLM reads and writes. It can be a word, part of a word, punctuation, or spacing. Cost, latency, input size, and output size are usually measured in tokens."
+        },
+        {
+          match: ["context", "window"],
+          text:
+            "The context window is the maximum amount of information the model can consider in one request. If important information is not inside the context, the model cannot reliably use it."
+        },
+        {
+          match: ["hallucinate", "hallucination"],
+          text:
+            "LLMs hallucinate because they generate likely next tokens; they do not automatically verify truth against a source. We reduce this using retrieval, citations, constrained outputs, validation, and refusal when evidence is missing."
+        },
+        {
+          match: ["rag", "retrieval"],
+          text:
+            "RAG means Retrieval-Augmented Generation. The system first retrieves relevant source chunks, then passes those chunks to the model so the answer can be grounded in evidence."
+        },
+        {
+          match: ["fine", "tuning", "fine-tuning"],
+          text:
+            "Fine-tuning updates a model using training examples so it behaves differently. Use RAG for knowledge. Use fine-tuning for behavior, tone, style, or repeated task patterns."
+        }
+      ];
+
+      function createMessage(role, text) {
+        const message = { role, text };
+        messages.push(message);
+        renderMessages();
+        return message;
+      }
+
+      function renderMessages(activeAssistantMessage) {
+        emptyEl.style.display = messages.length ? "none" : "grid";
+        messagesEl.innerHTML = "";
+
+        for (const message of messages) {
+          const el = document.createElement("div");
+          el.className = `message ${message.role}`;
+          el.textContent = message.text;
+
+          if (message === activeAssistantMessage) {
+            const cursor = document.createElement("span");
+            cursor.className = "cursor";
+            cursor.textContent = "|";
+            el.appendChild(cursor);
+          }
+
+          messagesEl.appendChild(el);
+        }
+
+        chatEl.scrollTop = chatEl.scrollHeight;
+      }
+
+      function chooseAnswer(prompt) {
+        const normalized = prompt.toLowerCase();
+        const hit = answers.find((answer) =>
+          answer.match.some((word) => normalized.includes(word))
+        );
+
+        if (hit) return hit.text;
+
+        return (
+          "For Week 1, map every answer to this flow: instructions + user input + relevant context -> model -> generated output. " +
+          "If you want interview practice, ask about tokens, context window, hallucination, RAG, or fine-tuning."
+        );
+      }
+
+      function setStreamingState(nextIsStreaming) {
+        isStreaming = nextIsStreaming;
+        abortStream = false;
+        statusEl.textContent = nextIsStreaming ? "Streaming..." : "Idle";
+        sendButton.disabled = nextIsStreaming;
+        stopButton.disabled = !nextIsStreaming;
+        promptInput.disabled = nextIsStreaming;
+      }
+
+      function sleep(ms) {
+        return new Promise((resolve) => window.setTimeout(resolve, ms));
+      }
+
+      async function streamAnswer(prompt) {
+        setStreamingState(true);
+        const assistant = createMessage("assistant", "");
+        const fullText = chooseAnswer(prompt);
+        const tokens = fullText.split(/(\s+)/);
+
+        for (const token of tokens) {
+          if (abortStream) {
+            assistant.text += "\n\n[Stopped]";
+            break;
+          }
+
+          assistant.text += token;
+          renderMessages(assistant);
+          await sleep(45);
+        }
+
+        renderMessages();
+        setStreamingState(false);
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        errorEl.textContent = "";
+
+        const prompt = promptInput.value.trim();
+        if (!prompt) {
+          errorEl.textContent = "Type a question first.";
+          return;
+        }
+
+        if (isStreaming) return;
+
+        promptInput.value = "";
+        createMessage("user", prompt);
+
+        try {
+          await streamAnswer(prompt);
+        } catch (error) {
+          errorEl.textContent = "Something failed while streaming.";
+          setStreamingState(false);
+        }
+      });
+
+      stopButton.addEventListener("click", () => {
+        abortStream = true;
+        statusEl.textContent = "Stopping...";
+      });
+    </script>
+  </body>
+</html>
