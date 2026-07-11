@@ -37,9 +37,13 @@ function createProfileJson(text) {
   };
 }
 
-async function mockStructuredExtraction(text) {
+async function mockStructuredExtraction(text, options = {}) {
   // This simulates a model returning structured output.
   // In a real app this would be replaced by a model call with a JSON schema.
+  if (options.simulateBadOutput && options.attempt === 1) {
+    return "{ name: Chandramohan Negi, skills: React, TypeScript";
+  }
+
   return JSON.stringify(createProfileJson(text), null, 2);
 }
 

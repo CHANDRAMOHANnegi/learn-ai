@@ -25,6 +25,8 @@ week-02/
   structured-output/
     index.html
     mock-model-provider.js
+    profile-schema.js
+    prompt-builder.js
     server.js
   readme.md
 ```
@@ -94,6 +96,10 @@ Learn:
 Build:
 
 - resume/profile extractor that returns strict JSON
+
+Interview answer:
+
+> If a model returns invalid structured output, parse and validate it on the backend, retry with a stricter prompt or schema instruction, and return a controlled error if it still fails.
 
 ### Week 3: Embeddings
 

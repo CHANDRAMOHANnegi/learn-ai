@@ -1,7 +1,9 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const { buildExtractionPrompt } = require("./prompt-builder");
 const { mockStructuredExtraction } = require("./mock-model-provider");
+const { validateProfile } = require("./profile-schema");
 
 const PORT = process.env.PORT || 8788;
 const HOST = "127.0.0.1";
@@ -20,34 +22,15 @@ function readRequestBody(req) {
   });
 }
 
-function validateProfile(value) {
-  const errors = [];
-
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return ["response must be an object"];
-  }
-
-  if (typeof value.name !== "string") errors.push("name must be a string");
-  if (typeof value.role !== "string") errors.push("role must be a string");
-  if (!Array.isArray(value.skills)) errors.push("skills must be an array");
-  if (typeof value.summary !== "string") errors.push("summary must be a string");
-  if (!["low", "medium", "high"].includes(value.confidence)) {
-    errors.push("confidence must be low, medium, or high");
-  }
-  if (!Array.isArray(value.missing_info)) {
-    errors.push("missing_info must be an array");
-  }
-
-  return errors;
-}
-
 async function handleExtract(req, res) {
   const rawBody = await readRequestBody(req);
   let text = "";
+  let simulateBadOutput = false;
 
   try {
     const parsed = JSON.parse(rawBody);
     text = String(parsed.text || "");
+    simulateBadOutput = Boolean(parsed.simulateBadOutput);
   } catch {
     res.writeHead(400, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Invalid JSON body" }));
@@ -60,37 +43,78 @@ async function handleExtract(req, res) {
     return;
   }
 
-  const modelOutput = await mockStructuredExtraction(text);
+  const attempts = [];
 
-  try {
-    const profile = JSON.parse(modelOutput);
-    const validationErrors = validateProfile(profile);
-
-    res.writeHead(validationErrors.length ? 422 : 200, {
-      "Content-Type": "application/json"
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const prompt = buildExtractionPrompt(text, { attempt });
+    const modelOutput = await mockStructuredExtraction(text, {
+      simulateBadOutput,
+      attempt
     });
-    res.end(
-      JSON.stringify(
-        {
-          profile,
-          validation: {
-            ok: validationErrors.length === 0,
-            errors: validationErrors
-          },
-          raw_model_output: modelOutput
-        },
-        null,
-        2
-      )
-    );
-  } catch {
-    res.writeHead(502, { "Content-Type": "application/json" });
-    res.end(
-      JSON.stringify({
-        error: "Model returned invalid JSON",
-        raw_model_output: modelOutput
-      })
-    );
+
+    try {
+      const profile = JSON.parse(modelOutput);
+      const validationErrors = validateProfile(profile);
+      const ok = validationErrors.length === 0;
+
+      attempts.push({
+        attempt,
+        ok,
+        reason: ok ? "valid" : "schema validation failed",
+        prompt,
+        raw_model_output: modelOutput,
+        errors: validationErrors
+      });
+
+      if (ok || attempt === 2) {
+        res.writeHead(ok ? 200 : 422, {
+          "Content-Type": "application/json"
+        });
+        res.end(
+          JSON.stringify(
+            {
+              profile,
+              validation: {
+                ok,
+                errors: validationErrors
+              },
+              attempts
+            },
+            null,
+            2
+          )
+        );
+        return;
+      }
+    } catch {
+      attempts.push({
+        attempt,
+        ok: false,
+        reason: "invalid JSON",
+        prompt,
+        raw_model_output: modelOutput,
+        errors: ["model returned invalid JSON"]
+      });
+
+      if (attempt === 2) {
+        res.writeHead(502, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify(
+            {
+              error: "Model returned invalid JSON after retry",
+              validation: {
+                ok: false,
+                errors: ["model returned invalid JSON after retry"]
+              },
+              attempts
+            },
+            null,
+            2
+          )
+        );
+        return;
+      }
+    }
   }
 }
 
