@@ -21,6 +21,12 @@ week-01/
     mock-model-provider.js
     server.js
   readme.md
+week-02/
+  structured-output/
+    index.html
+    mock-model-provider.js
+    server.js
+  readme.md
 ```
 
 Run the Week 1 backend streaming demo:
@@ -33,6 +39,18 @@ Open:
 
 ```txt
 http://127.0.0.1:8787
+```
+
+Run the Week 2 structured output demo:
+
+```bash
+node week-02/structured-output/server.js
+```
+
+Open:
+
+```txt
+http://127.0.0.1:8788
 ```
 
 ## 8-Week Interview-Focused Plan
