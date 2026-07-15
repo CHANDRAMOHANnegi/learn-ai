@@ -69,6 +69,25 @@ RAG = how the answer is grounded
 MCP = how an AI client calls that grounded-answer tool
 ```
 
+## Evals
+
+Run:
+
+```bash
+node personal-rag/run-evals.js
+```
+
+The evals check:
+
+- expected chunks are retrieved
+- citations point to the right source
+- unsupported questions refuse
+- answers contain expected grounded facts
+
+Interview answer:
+
+> For RAG evaluation, I test retrieval and generation separately. I check whether the right chunks are retrieved, whether citations point to the right sources, whether unsupported questions are refused, and whether grounded answers contain the expected facts.
+
 ## What This Teaches
 
 This is RAG with your own data.
@@ -88,5 +107,4 @@ If the question is not in the personal sources, the assistant should refuse.
 - replace toy embeddings with a real embedding model
 - replace deterministic answer generation with an LLM call
 - add source freshness and permissions
-- add eval questions for common interview/profile queries
 - register `mcp-server.js` with an MCP-compatible client

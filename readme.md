@@ -47,10 +47,12 @@ week-04/
     server.js
   readme.md
 personal-rag/
+  eval-cases.js
   index.html
   mcp-server.js
   personal-rag-service.js
   readme.md
+  run-evals.js
   server.js
   sources.js
 ```
