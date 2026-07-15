@@ -48,6 +48,7 @@ week-04/
   readme.md
 personal-rag/
   index.html
+  mcp-server.js
   personal-rag-service.js
   readme.md
   server.js

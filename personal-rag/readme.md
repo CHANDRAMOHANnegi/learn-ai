@@ -40,6 +40,35 @@ curl -s http://127.0.0.1:8791/api/answer \
   -d '{"question":"Who is Chandramohan Negi?","topK":4,"minScore":0.04}'
 ```
 
+## MCP Tool Server
+
+This module also exposes the same Personal RAG through MCP-style JSON-RPC over stdio.
+
+Run:
+
+```bash
+node personal-rag/mcp-server.js
+```
+
+Tools:
+
+- `answer_about_chandramohan`
+- `search_personal_profile`
+- `list_personal_sources`
+
+Example tool call:
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"answer_about_chandramohan","arguments":{"question":"What did Chandramohan do at Zscaler?"}}}
+```
+
+Mental model:
+
+```txt
+RAG = how the answer is grounded
+MCP = how an AI client calls that grounded-answer tool
+```
+
 ## What This Teaches
 
 This is RAG with your own data.
@@ -60,3 +89,4 @@ If the question is not in the personal sources, the assistant should refuse.
 - replace deterministic answer generation with an LLM call
 - add source freshness and permissions
 - add eval questions for common interview/profile queries
+- register `mcp-server.js` with an MCP-compatible client

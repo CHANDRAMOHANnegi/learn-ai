@@ -25,7 +25,20 @@ function clampNumber(value, fallback, min, max) {
 function retrieve(question, options = {}) {
   const topK = clampNumber(options.topK, 4, 1, 8);
   const minScore = clampNumber(options.minScore, 0.04, 0, 1);
-  const rankedChunks = rankDocuments(question, searchIndex);
+  const questionTokens = tokenize(question);
+  const rankedChunks = rankDocuments(question, searchIndex)
+    .map((chunk) => {
+      const titleTokens = tokenize(chunk.title);
+      const exactTitleMatches = titleTokens.filter((token) => {
+        return questionTokens.includes(token);
+      }).length;
+
+      return {
+        ...chunk,
+        score: chunk.score + exactTitleMatches * 0.2,
+      };
+    })
+    .sort((left, right) => right.score - left.score);
   const selectedChunks = rankedChunks
     .filter((chunk) => chunk.score >= minScore)
     .slice(0, topK)
@@ -44,7 +57,7 @@ function retrieve(question, options = {}) {
 
   return {
     question,
-    questionTokens: tokenize(question),
+    questionTokens,
     selectedChunks,
     retrievalConfig: {
       topK,
