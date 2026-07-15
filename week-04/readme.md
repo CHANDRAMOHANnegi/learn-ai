@@ -35,7 +35,7 @@ query -> ranked documents -> prompt context -> cited answer
 
 ## Citations
 
-Citations connect answer claims back to retrieved evidence.
+Citations connect answer claims back to retrieved evidence chunks.
 
 They do not magically make the answer true.
 
@@ -60,6 +60,28 @@ Bad behavior:
 ```txt
 The model guesses from general knowledge while pretending it used sources.
 ```
+
+## Chunking
+
+RAG usually retrieves chunks, not entire documents.
+
+Why:
+
+- smaller chunks fit better inside the context window
+- citations can point to exact evidence
+- retrieval is less noisy than sending a whole long document
+
+Tradeoff:
+
+```txt
+small chunk = precise but may miss surrounding context
+large chunk = more context but more noise and token cost
+overlap = repeats some text so boundaries do not cut meaning
+```
+
+Interview answer:
+
+> Chunking splits documents into smaller retrievable units. Good chunk size depends on the content and model context window. Smaller chunks improve precision, larger chunks preserve context, and overlap helps avoid losing meaning at boundaries.
 
 ## Build Target
 
@@ -87,9 +109,10 @@ curl -s http://127.0.0.1:8790/api/answer \
 
 ## What To Notice In The Demo
 
-- retrieved documents become numbered context blocks
+- retrieved chunks become numbered context blocks
 - the generated prompt tells the model to answer only from context
 - answer sentences include citation markers like `[1]`
+- citation sources include chunk IDs like `week-01-notes#chunk-1`
 - weak retrieval returns a refusal instead of a confident answer
 - this uses a mock answer so the RAG control flow is visible
 

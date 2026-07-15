@@ -40,6 +40,7 @@ week-03/
   readme.md
 week-04/
   rag-citations/
+    chunker.js
     corpus.js
     index.html
     rag-service.js

@@ -4,44 +4,53 @@ const {
   tokenize,
 } = require("../../week-03/semantic-search/embedding");
 const { corpus } = require("./corpus");
+const { chunkCorpus } = require("./chunker");
 
-const searchIndex = createSearchIndex(corpus);
+const chunks = chunkCorpus(corpus, {
+  sentencesPerChunk: 1,
+  overlapSentences: 0,
+});
+const searchIndex = createSearchIndex(chunks);
 
 function retrieveContext(question, options = {}) {
   const topK = Math.min(Math.max(Number(options.topK || 3), 1), 5);
   const minScore = Math.min(Math.max(Number(options.minScore || 0.08), 0), 1);
 
   const rankedDocuments = rankDocuments(question, searchIndex);
-  const selectedDocuments = rankedDocuments
-    .filter((document) => document.score >= minScore)
+  const selectedChunks = rankedDocuments
+    .filter((chunk) => chunk.score >= minScore)
     .slice(0, topK)
-    .map((document, index) => ({
+    .map((chunk, index) => ({
       citationId: index + 1,
-      id: document.id,
-      title: document.title,
-      source: document.source,
-      text: document.text,
-      score: document.score,
-      matchedWords: document.matchedWords,
+      id: chunk.id,
+      documentId: chunk.documentId,
+      title: chunk.title,
+      source: chunk.source,
+      chunkNumber: chunk.chunkNumber,
+      text: chunk.text,
+      score: chunk.score,
+      matchedWords: chunk.matchedWords,
     }));
 
   return {
     question,
     questionTokens: tokenize(question),
-    selectedDocuments,
+    selectedDocuments: selectedChunks,
+    selectedChunks,
     retrievalConfig: {
       topK,
       minScore,
-      totalDocuments: rankedDocuments.length,
-      selectedCount: selectedDocuments.length,
+      totalDocuments: corpus.length,
+      totalChunks: rankedDocuments.length,
+      selectedCount: selectedChunks.length,
     },
   };
 }
 
-function buildPrompt(question, selectedDocuments) {
-  const contextBlock = selectedDocuments
-    .map((document) => {
-      return `[${document.citationId}] ${document.title} (${document.source}): ${document.text}`;
+function buildPrompt(question, selectedChunks) {
+  const contextBlock = selectedChunks
+    .map((chunk) => {
+      return `[${chunk.citationId}] ${chunk.title} (${chunk.source}#chunk-${chunk.chunkNumber}): ${chunk.text}`;
     })
     .join("\n\n");
 
@@ -58,8 +67,8 @@ function buildPrompt(question, selectedDocuments) {
   ].join("\n");
 }
 
-function generateGroundedAnswer(question, selectedDocuments) {
-  if (selectedDocuments.length === 0) {
+function generateGroundedAnswer(question, selectedChunks) {
+  if (selectedChunks.length === 0) {
     return {
       answer:
         "I do not have enough evidence in the retrieved context to answer this safely.",
@@ -68,7 +77,7 @@ function generateGroundedAnswer(question, selectedDocuments) {
     };
   }
 
-  const citationList = selectedDocuments.map((document) => `[${document.citationId}]`);
+  const citationList = selectedChunks.map((chunk) => `[${chunk.citationId}]`);
   const firstCitation = citationList[0];
   const secondCitation = citationList[1] || firstCitation;
 
@@ -77,11 +86,11 @@ function generateGroundedAnswer(question, selectedDocuments) {
       `Use retrieval to fetch trusted context before generation ${firstCitation}. ` +
       `Then keep only strong matches using topK and a minimum score so weak evidence is not treated as truth ${secondCitation}. ` +
       `The final answer should cite the retrieved sources and refuse when context is missing ${firstCitation}.`,
-    citations: selectedDocuments.map((document) => ({
-      citationId: document.citationId,
-      title: document.title,
-      source: document.source,
-      score: document.score,
+    citations: selectedChunks.map((chunk) => ({
+      citationId: chunk.citationId,
+      title: chunk.title,
+      source: `${chunk.source}#chunk-${chunk.chunkNumber}`,
+      score: chunk.score,
     })),
     refused: false,
   };
@@ -89,15 +98,16 @@ function generateGroundedAnswer(question, selectedDocuments) {
 
 function answerQuestion(question, options = {}) {
   const retrieval = retrieveContext(question, options);
-  const prompt = buildPrompt(question, retrieval.selectedDocuments);
-  const generation = generateGroundedAnswer(question, retrieval.selectedDocuments);
+  const prompt = buildPrompt(question, retrieval.selectedChunks);
+  const generation = generateGroundedAnswer(question, retrieval.selectedChunks);
 
   return {
     question,
     answer: generation.answer,
     refused: generation.refused,
     citations: generation.citations,
-    selectedDocuments: retrieval.selectedDocuments,
+    selectedDocuments: retrieval.selectedChunks,
+    selectedChunks: retrieval.selectedChunks,
     retrievalConfig: retrieval.retrievalConfig,
     prompt,
     debug: {
@@ -111,6 +121,7 @@ function answerQuestion(question, options = {}) {
 module.exports = {
   answerQuestion,
   buildPrompt,
+  chunks,
   generateGroundedAnswer,
   retrieveContext,
 };

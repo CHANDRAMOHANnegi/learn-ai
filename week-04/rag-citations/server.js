@@ -1,7 +1,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { answerQuestion, retrieveContext } = require("./rag-service");
+const { answerQuestion, chunks, retrieveContext } = require("./rag-service");
 const { corpus } = require("./corpus");
 
 const port = Number(process.env.PORT || 8790);
@@ -42,6 +42,11 @@ const server = http.createServer(async (request, response) => {
 
     if (request.method === "GET" && request.url === "/api/corpus") {
       sendJson(response, 200, { corpus });
+      return;
+    }
+
+    if (request.method === "GET" && request.url === "/api/chunks") {
+      sendJson(response, 200, { chunks });
       return;
     }
 
