@@ -46,6 +46,12 @@ week-04/
     rag-service.js
     server.js
   readme.md
+personal-rag/
+  index.html
+  personal-rag-service.js
+  readme.md
+  server.js
+  sources.js
 ```
 
 Run the Week 1 backend streaming demo:
@@ -94,6 +100,18 @@ Open:
 
 ```txt
 http://127.0.0.1:8790
+```
+
+Run the Personal RAG demo:
+
+```bash
+node personal-rag/server.js
+```
+
+Open:
+
+```txt
+http://127.0.0.1:8791
 ```
 
 ## 8-Week Interview-Focused Plan

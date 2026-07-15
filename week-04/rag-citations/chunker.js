@@ -31,6 +31,7 @@ function chunkCorpus(corpus, options = {}) {
         documentId: document.id,
         title: document.title,
         source: document.source,
+        updatedAt: document.updatedAt,
         chunkNumber,
         text: chunkSentences.join(" "),
       });
